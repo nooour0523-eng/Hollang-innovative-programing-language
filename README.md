@@ -12,19 +12,19 @@ Hollang(TM)은 Hollang과 실행기인 HLND VM로 구성됩니다.
 스트림 안의 성분은 '\\\\' 을 통해 구분한다. 
 스트림을 열 때는 //open, 닫을 때는 close//을 쓴다.
 예컨대, Hello, World!를 출력하는 스트림은 이렇게 쓴다
-> //open \\ write \\ ’Hello, World!’ \\ close//
+> //open \\\\ write \\\\ ’Hello, World!’ \\\\ close//
 
 라인은 콘솔에서 출력되는 한 줄을 말한다. 즉, 여러 스트림이 한 줄을 출력할 수 있다.
 다음 라인으로 넘어가기 위해서는 //drop//를 입력한다.
 예를 들어, Hello,를 입력한 뒤 개행하여 World!를 입력하는 명령어는 다음과 같다.
-//open \\ write \\ ‘Hello,’ \\ close//
-//drop//
-//open \\ write \\ ‘World!’ \\ close//
+> //open \\\\ write \\\\ ‘Hello,’ \\\\ close//
+> //drop//
+> //open \\\\ write \\\\ ‘World!’ \\\\ close//
 라고 입력한다.
 
 함수는 여러 라인과 스트림을 하나로 묶어놓은 말 그대로 함수이다.
 함수는 숫자를 반환하는 num 함수, 문자를 반환하는 cha 함수, 그리고 코드를 실행하는 main 함수가 있다.
-함수를 선언할 때는 //def \\ 함수 유형 \\ 함수명 \\  매개변수~~ \\ continue// 를 사용하며, //def \\ close//로 함수 선언을 끝낸다.
+함수를 선언할 때는 //def \\\\ 함수 유형 \\\\ 함수명 \\\\  매개변수~~ \\\\ continue// 를 사용하며, //def \\\\ close//로 함수 선언을 끝낸다.
 즉, 우리가 Hello, World!를 실행하기 위해 필요한 코드는 다음과 같다.
 //def \\ main \\ main \\ continue//
 //open \\ write \\ ‘Hello, World’ \\ close//
