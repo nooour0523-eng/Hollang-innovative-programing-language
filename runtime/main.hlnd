@@ -1,0 +1,3 @@
+WRT 100 "Hello, World!"
+PRT 100
+HALT
