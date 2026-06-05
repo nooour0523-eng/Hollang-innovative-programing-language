@@ -6,6 +6,17 @@
 #include <map>
 #include <algorithm>
 
+// OS별 실행 파일 경로 추적을 위한 헤더
+#if defined(_WIN32) || defined(__WIN32__) || defined(WIN32)
+    #include <windows.h>
+#elif defined(__APPLE__)
+    #include <mach-o/dyld.h>
+    #include <limits.h>
+#else
+    #include <unistd.h>
+    #include <limits.h>
+#endif
+
 class HollandVirtualMachine {
 private:
     std::vector<int> memory;               
@@ -25,9 +36,44 @@ public:
         memory.resize(1024, 0);
     }
 
-    bool run(const std::string& filepath) {
-        std::ifstream file(filepath);
-        if (!file.is_open()) return false;
+    // OS 독립적으로 현재 가상머신 실행 파일의 폴더 경로를 반환하는 함수
+    std::string get_executable_directory() {
+        std::string path = "";
+#if defined(_WIN32)
+        char buffer[MAX_PATH];
+        GetModuleFileNameA(NULL, buffer, MAX_PATH);
+        path = std::string(buffer);
+        size_t pos = path.find_last_of("\\/");
+        if (pos != std::string::npos) path = path.substr(0, pos + 1);
+#elif defined(__APPLE__)
+        char buffer[PATH_MAX];
+        uint32_t size = sizeof(buffer);
+        if (_NSGetExecutablePath(buffer, &size) == 0) {
+            path = std::string(buffer);
+            size_t pos = path.find_last_of("/");
+            if (pos != std::string::npos) path = path.substr(0, pos + 1);
+        }
+#else
+        char buffer[PATH_MAX];
+        ssize_t count = readlink("/proc/self/exe", buffer, PATH_MAX);
+        if (count != -1) {
+            path = std::string(buffer, count);
+            size_t pos = path.find_last_of("/");
+            if (pos != std::string::npos) path = path.substr(0, pos + 1);
+        }
+#endif
+        return path;
+    }
+
+    bool run(const std::string& filename) {
+        // 실행 파일 폴더 기준 + 타겟 파일명을 합쳐서 진짜 절대 경로 계산
+        std::string full_path = get_executable_directory() + filename;
+        
+        std::ifstream file(full_path);
+        if (!file.is_open()) {
+            std::cerr << "[에러] 파일 타겟팅 실패! 시도한 경로: " << full_path << "\n";
+            return false;
+        }
 
         std::vector<std::string> instructions;
         std::map<std::string, int> labels;
@@ -47,14 +93,8 @@ public:
 
         if (instructions.empty()) return false;
 
-        // ★ [초강력 디버깅] 가상머신이 읽은 실시간 기계어 내용을 강제로 콘솔에 덤프합니다.
-        std::cout << "\n[VM] 성공적으로 " << instructions.size() << "개의 명령어 로드 완료.\n";
-        std::cout << "=== [기계어 추적 로그] ===\n";
-        for (size_t i = 0; i < instructions.size(); ++i) {
-            std::cout << " Line " << i + 1 << ": " << instructions[i] << "\n";
-        }
-        std::cout << "==========================\n\n";
-        std::cout << "--- [실행 스트림 시작] ---\n";
+        std::cout << "\n[VM] 성공적으로 " << instructions.size() << "개의 명령어 로드 완료. 실행을 시작합니다.\n";
+        std::cout << "-------------------------------------\n";
 
         size_t pc = 0;
         while (pc < instructions.size()) {
@@ -83,8 +123,6 @@ public:
                 
                 if (first_quote != std::string::npos && last_quote != std::string::npos && first_quote < last_quote) {
                     string_buffer[addr] = raw_line.substr(first_quote + 1, last_quote - first_quote - 1);
-                } else {
-                    string_buffer[addr] = ""; 
                 }
             }
             
@@ -93,7 +131,7 @@ public:
                 if (string_buffer.find(addr) != string_buffer.end()) {
                     std::cout << string_buffer[addr] << std::endl;
                 } else {
-                    std::cout << "[VM 경고] " << addr << "번지에 출력할 문자열이 비어있음" << std::endl;
+                    std::cout << std::endl;
                 }
             }
             
@@ -112,11 +150,18 @@ public:
 
 int main() {
     HollandVirtualMachine vm;
-    std::string default_path = "runtime/main.hlnd";
+    
+    // 실행 파일 폴더 밑에 있는 runtime/main.hlnd 를 상대적으로 타격
+#if defined(_WIN32)
+    std::string target_file = "runtime\\main.hlnd";
+#else
+    std::string target_file = "runtime/main.hlnd";
+#endif
 
-    if (!vm.run(default_path)) {
-        std::cerr << "[에러] 파일을 로드할 수 없습니다.\n";
+    std::cout << "--- [Holland VM 고정 경로 동기화 모드] ---\n";
+    if (!vm.run(target_file)) {
+        std::cerr << "[실패] 경로가 올바르지 않거나 파일이 비어있습니다.\n";
     }
-    std::cout << "-------------------------\n";
+    std::cout << "-----------------------------------------\n";
     return 0;
 }
